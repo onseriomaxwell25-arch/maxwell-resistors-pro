@@ -1,2 +1,2 @@
 # maxwell-resistors-pro
-A we based final year engineering project
+A web based final year engineering project
