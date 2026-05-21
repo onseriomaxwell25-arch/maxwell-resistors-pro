@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ResCalc — Advanced Resistor Calculator</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<header>
+  <div class="logo">⚡ ResCalc Pro</div>
+  <h1>Resistor Network Calculator</h1>
+  <p class="subtitle">Series · Parallel · Mixed Networks — unlimited resistors</p>
+</header>
+
+<main>
+  <!-- ═══ LEFT: Configuration ═══ -->
+  <aside class="panel controls-panel">
+    <h2>Network Builder</h2>
+
+    <!-- Voltage -->
+    <div class="field-group">
+      <label class="field-label">Supply Voltage</label>
+      <div class="input-unit">
+        <input type="number" id="voltage" value="9" min="0.01" step="0.1" oninput="calculate()"/>
+        <span class="unit">V</span>
+      </div>
+    </div>
+
+    <!-- Network mode tabs -->
+    <div class="field-group">
+      <label class="field-label">Network Type</label>
+      <div class="mode-toggle">
+        <button id="btn-series"   class="mode-btn active"  onclick="setNetworkMode('series')">Series</button>
+        <button id="btn-parallel" class="mode-btn"         onclick="setNetworkMode('parallel')">Parallel</button>
+        <button id="btn-mixed"    class="mode-btn"         onclick="setNetworkMode('mixed')">Mixed</button>
+      </div>
+    </div>
+
+    <!-- ── SIMPLE mode (series / parallel): flat list ── -->
+    <div id="simple-builder">
+      <div class="resistors-header">
+        <label class="field-label">Resistors</label>
+        <div class="r-actions">
+          <button class="icon-btn" onclick="simpleAdd()" title="Add resistor">＋</button>
+          <button class="icon-btn danger" onclick="simpleRemove()" title="Remove last">－</button>
+        </div>
+      </div>
+      <div id="simple-list" class="resistor-list"></div>
+    </div>
+
+    <!-- ── MIXED mode: groups ── -->
+    <div id="mixed-builder" style="display:none">
+      <div class="mixed-info">
+        Each <strong>group</strong> is wired in <em>series</em> internally.<br>
+        All groups are wired in <em>parallel</em> with each other.
+      </div>
+      <div id="groups-container"></div>
+      <button class="add-group-btn" onclick="addGroup()">＋ Add Group</button>
+    </div>
+
+    <button class="calc-btn" onclick="calculate()">Calculate ⚡</button>
+  </aside>
+
+  <!-- ═══ RIGHT TOP: Results ═══ -->
+  <section class="panel results-panel">
+    <h2>Results</h2>
+    <div class="results-grid">
+      <div class="result-card" id="card-total-r">
+        <div class="result-label">Total Resistance</div>
+        <div class="result-value" id="val-total-r">—</div>
+        <div class="result-unit">Ω</div>
+      </div>
+      <div class="result-card" id="card-current">
+        <div class="result-label">Total Current</div>
+        <div class="result-value" id="val-current">—</div>
+        <div class="result-unit">A</div>
+      </div>
+      <div class="result-card" id="card-power">
+        <div class="result-label">Total Power</div>
+        <div class="result-value" id="val-power">—</div>
+        <div class="result-unit">W</div>
+      </div>
+    </div>
+    <div id="individual-table-wrap" style="display:none">
+      <h3>Per-Resistor Breakdown</h3>
+      <div class="table-scroll">
+        <table id="individual-table">
+          <thead>
+            <tr>
+              <th>Label</th><th>Value (Ω)</th><th>Voltage (V)</th>
+              <th>Current (A)</th><th>Power (W)</th>
+            </tr>
+          </thead>
+          <tbody id="individual-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ RIGHT BOTTOM: Bulb ═══ -->
+  <section class="panel bulb-panel">
+    <h2>Bulb Brightness</h2>
+    <div class="bulb-stage">
+      <div class="bulb-container">
+        <div class="glow-ring" id="glow-ring"></div>
+        <svg id="bulb-svg" viewBox="0 0 120 160" xmlns="http://www.w3.org/2000/svg">
+          <ellipse id="bulb-glow" cx="60" cy="65" rx="52" ry="52" fill="rgba(255,220,50,0)"/>
+          <path id="bulb-glass"
+            d="M60,15 C35,15 18,32 18,55 C18,72 27,85 38,93 L38,110 C38,114 42,117 46,117 L74,117 C78,117 82,114 82,110 L82,93 C93,85 102,72 102,55 C102,32 85,15 60,15 Z"
+            fill="#2a2a3a" stroke="#555" stroke-width="2"/>
+          <polyline id="filament"
+            points="48,105 48,85 55,75 65,85 72,75 72,105"
+            fill="none" stroke="#888" stroke-width="2.5" stroke-linecap="round"/>
+          <rect x="38" y="117" width="44" height="8" rx="2" fill="#444" stroke="#666" stroke-width="1"/>
+          <rect x="40" y="125" width="40" height="8" rx="2" fill="#3a3a3a" stroke="#555" stroke-width="1"/>
+          <rect x="42" y="133" width="36" height="8" rx="2" fill="#333" stroke="#555" stroke-width="1"/>
+          <path id="bulb-shine" d="M30,38 Q38,28 50,27"
+            fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="brightness-bar-wrap">
+        <div class="brightness-label">Brightness</div>
+        <div class="brightness-track">
+          <div class="brightness-fill" id="brightness-fill"></div>
+        </div>
+        <div class="brightness-pct" id="brightness-pct">0%</div>
+      </div>
+      <div class="power-badge" id="power-badge">—</div>
+    </div>
+  </section>
+
+  <!-- ═══ FULL WIDTH: Circuit Diagram ═══ -->
+  <section class="panel diagram-panel">
+    <div class="diagram-header">
+      <h2>Circuit Diagram</h2>
+      <div class="diagram-controls">
+        <button class="diag-btn" onclick="zoomIn()">＋ Zoom</button>
+        <button class="diag-btn" onclick="zoomOut()">－ Zoom</button>
+        <button class="diag-btn" onclick="resetZoom()">⟳ Reset</button>
+      </div>
+    </div>
+    <div class="circuit-wrap" id="circuit-wrap">
+      <svg id="circuit-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
